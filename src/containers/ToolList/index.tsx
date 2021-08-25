@@ -3,7 +3,7 @@
  */
 import { Wrapper, Component, ToolIcon, List } from "./style";
 import map from "lodash/map";
-import toolsMap from "./toolsMap.json";
+import toolsMap from "../../data/toolsMap";
 import { toolState } from "../../data/atom";
 import { useRecoilState } from "recoil";
 
@@ -16,11 +16,11 @@ const ToolList = () => {
         <List className="tools">
           {map(toolsMap, (item, index) => (
             <ToolIcon
-              onClick={() => setTool(item?.key)}
+              onClick={() => setTool(item?.name)}
               key={item?.title}
               title={item?.title}
               index={index}
-              active={tool === item?.key}
+              active={tool === item?.name}
             >
               <span></span>
             </ToolIcon>

@@ -1,16 +1,16 @@
 /**
  * 畫布區塊
  */
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Wrapper, MainCanvas } from "./style";
-import { useRecoilValue } from "recoil";
+import { useRecoilState, useRecoilValue } from "recoil";
 import { activeColorState, toolState } from "../../data/atom";
 
 let lastPoint: { x?: number; y?: number } | null = {}; // 滑鼠移動的上一個點
 let pointsArray: any = []; // 被記錄的點陣列
 
 const CanvasBox = () => {
-  const activeColor = useRecoilValue(activeColorState);
+  const [activeColor, setActiveColor] = useRecoilState(activeColorState);
   const tool = useRecoilValue(toolState);
 
   const canvasRef = useRef<any>(null);
@@ -34,8 +34,11 @@ const CanvasBox = () => {
           ctx.stroke();
           lastPoint = { x: point?.x, y: point?.y };
           ctx.closePath();
+          pointsArray = [...pointsArray, point];
+          break;
+        default:
+          break;
       }
-      pointsArray = [...pointsArray, point];
     };
 
     /**
@@ -58,12 +61,19 @@ const CanvasBox = () => {
   }, [isDrawing, canvasRef, activeColor, tool]);
 
   /**
-   * 滑鼠點下畫布後開始畫畫 or 填滿
+   * 滑鼠點下畫布
    */
-  const handleMouseDown = () => {
+  const handleMouseDown = (event: any) => {
     setIsDrawing(true);
-    if (tool === "fillColor") {
-      fillCanvas();
+    switch (tool) {
+      case "fillColor":
+        fillCanvas();
+        break;
+      case "pickColor":
+        pickColor(event);
+        break;
+      default:
+        break;
     }
   };
 
@@ -74,6 +84,24 @@ const CanvasBox = () => {
     const ctx = canvasRef.current.getContext("2d");
     ctx.fillStyle = activeColor;
     ctx.fillRect(0, 0, 500, 500);
+  };
+
+  /**
+   * 提取顏色
+   */
+  const pickColor = (e: any) => {
+    let rect = canvasRef.current.getBoundingClientRect();
+    const point = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext("2d");
+      const p = ctx.getImageData(point?.x, point?.y, 1, 1).data;
+      const color = `rgba(${p[0]}, ${p[1]}, ${p[2]}, ${p[3]})`;
+      console.log("p", p, color);
+      setActiveColor(color);
+    }
   };
 
   /**
@@ -95,6 +123,7 @@ const CanvasBox = () => {
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseOver={handleMouseUp}
+        cursor={tool}
       ></MainCanvas>
     </Wrapper>
   );

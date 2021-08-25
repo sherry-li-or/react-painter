@@ -1,4 +1,6 @@
 import styled from "styled-components";
+import find from "lodash/find";
+import toolsMap from "../../data/toolsMap";
 
 const Wrapper = styled("div")`
   background: var(--AppWorkspace);
@@ -12,8 +14,12 @@ const Wrapper = styled("div")`
   height: 80vh;
 `;
 
-const MainCanvas = styled("canvas")`
+const MainCanvas = styled("canvas")<{ cursor: any }>`
   background: #fff;
+  cursor: ${(props: { cursor: string }) => {
+    const active = find(toolsMap, { name: props?.cursor });
+    return `url(${active?.cursor}) 9 22, crosshair`;
+  }};
 `;
 
 export { Wrapper, MainCanvas };

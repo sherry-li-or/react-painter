@@ -3,7 +3,7 @@
  */
 import { useRecoilState } from "recoil";
 import { activeColorState, subColorState } from "../../data/atom";
-import colorList from "./defalutColorList.json";
+import colorList from "../../data/defalutColorList.json";
 import map from "lodash/map";
 import {
   Wrapper,
