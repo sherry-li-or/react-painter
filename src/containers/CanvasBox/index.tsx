@@ -8,22 +8,27 @@ import { activeColorState, toolState } from "../../data/atom";
 
 let lastPoint: { x?: number; y?: number } | null = {}; // 滑鼠移動的上一個點
 let pointsArray: any = []; // 被記錄的點陣列
+let initialPoint: { x: number; y: number } = { x: 0, y: 0 }; // 點擊位置
 
 const CanvasBox = () => {
   const [activeColor, setActiveColor] = useRecoilState(activeColorState);
   const tool = useRecoilValue(toolState);
 
-  const canvasRef = useRef<any>(null);
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
+  const [savedData, setSavedData] = useState<HTMLImageElement>(new Image());
+
+  const canvasRef = useRef<any>(null);
+  const canvasWrapRef = useRef<any>(null);
 
   useEffect(() => {
     const handleDrawCanvas = (point: { x: number; y: number }) => {
-      const ctx = canvasRef.current.getContext("2d");
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
       switch (tool) {
-        case "eraser":
+        case "eraser": // 橡皮擦
           ctx.clearRect(point?.x, point?.y, 10, 10);
           break;
-        case "pencil":
+        case "pencil": // 鉛筆
           ctx.strokeStyle = activeColor;
           ctx.lineWidth = 1;
           ctx.lineCap = "round"; // 頭尾圓弧的線條
@@ -36,6 +41,18 @@ const CanvasBox = () => {
           ctx.closePath();
           pointsArray = [...pointsArray, point];
           break;
+        case "line": // 直線
+          clearCanvas();
+          restore();
+          // draw the current line
+          ctx.beginPath();
+          ctx.strokeStyle = activeColor;
+          ctx.lineWidth = 1;
+          ctx.moveTo(initialPoint?.x, initialPoint?.y);
+          ctx.lineTo(point?.x, point?.y);
+          ctx.stroke();
+          break;
+
         default:
           break;
       }
@@ -72,8 +89,23 @@ const CanvasBox = () => {
       case "pickColor":
         pickColor(event);
         break;
+      case "line":
+        const point = getClientOffset(event);
+        initialPoint = { x: point?.x, y: point?.y };
+        saveCanvas();
+        break;
       default:
         break;
+    }
+  };
+
+  /**
+   * 提起畫筆
+   */
+  const handleMouseUp = (event: any) => {
+    if (isDrawing) {
+      setIsDrawing(false);
+      lastPoint = null;
     }
   };
 
@@ -90,32 +122,49 @@ const CanvasBox = () => {
    * 提取顏色
    */
   const pickColor = (e: any) => {
-    let rect = canvasRef.current.getBoundingClientRect();
-    const point = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    };
+    const point = getClientOffset(e);
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
       const p = ctx.getImageData(point?.x, point?.y, 1, 1).data;
       const color = `rgba(${p[0]}, ${p[1]}, ${p[2]}, ${p[3]})`;
-      console.log("p", p, color);
       setActiveColor(color);
     }
   };
 
-  /**
-   * 提起畫筆
-   */
-  const handleMouseUp = () => {
-    if (isDrawing) {
-      setIsDrawing(false);
-      lastPoint = null;
-    }
+  /** 取得位置 */
+  const getClientOffset = (event: any) => {
+    let rect = canvasRef.current.getBoundingClientRect();
+    const point = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
+    return point;
+  };
+
+  /** 清空畫布 */
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  /** 儲存畫布 */
+  const saveCanvas = () => {
+    const canvas = canvasRef.current;
+    const saved = new Image();
+    saved.src = canvas.toDataURL("image/png");
+    setSavedData(saved);
+  };
+
+  /** 還原畫布 */
+  const restore = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(savedData, 0, 0);
   };
 
   return (
-    <Wrapper>
+    <Wrapper ref={canvasWrapRef}>
       <MainCanvas
         ref={canvasRef}
         height={500}
