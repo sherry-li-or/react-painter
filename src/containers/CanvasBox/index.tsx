@@ -1,7 +1,7 @@
 /**
  * 畫布區塊
  */
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Wrapper, MainCanvas } from "./style";
 import { useRecoilState, useRecoilValue } from "recoil";
 import { activeColorState, toolState } from "../../data/atom";
@@ -23,6 +23,10 @@ const CanvasBox = () => {
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [savedData, setSavedData] = useState<HTMLImageElement>(new Image());
   const [initialPoint, setInitialPoint] = useState<pointIF | null>({
+    x: undefined,
+    y: undefined,
+  }); // 滑鼠移動的上一個點
+  const [secondPoint, setSecondPoint] = useState<pointIF | null>({
     x: undefined,
     y: undefined,
   }); // 滑鼠移動的上一個點
@@ -69,6 +73,20 @@ const CanvasBox = () => {
           ctx.lineWidth = 1;
           ctx.moveTo(initialPoint?.x, initialPoint?.y);
           ctx.lineTo(point?.x, point?.y);
+          ctx.stroke();
+          break;
+        case "curve": // 曲線
+          clearCanvas();
+          restore();
+          //curve toward mouse
+          ctx.beginPath();
+          ctx.moveTo(secondPoint?.x, secondPoint?.y);
+          ctx.quadraticCurveTo(
+            point?.x,
+            point?.y,
+            initialPoint?.x,
+            initialPoint?.y
+          );
           ctx.stroke();
           break;
         case "rectangle":
@@ -125,7 +143,7 @@ const CanvasBox = () => {
     return () => {
       canvasRef.current.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [isDrawing, canvasRef, activeColor, tool]);
+  }, [isDrawing, canvasRef, activeColor, tool, initialPoint, secondPoint]);
 
   /**
    * 滑鼠點下畫布
@@ -154,6 +172,9 @@ const CanvasBox = () => {
       case "ellipse":
         saveCanvas();
         break;
+      case "curve":
+        saveCanvas();
+        break;
       default:
         break;
     }
@@ -167,6 +188,14 @@ const CanvasBox = () => {
       setIsDrawing(false);
       setInitialPoint(null);
       lastPoint = null;
+      switch (tool) {
+        case "curve":
+          const point = getClientOffset(event);
+          setSecondPoint(point);
+          break;
+        default:
+          break;
+      }
     }
   };
 
@@ -180,11 +209,11 @@ const CanvasBox = () => {
   };
 
   /** 還原畫布 */
-  const restore = () => {
+  const restore = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     ctx.drawImage(savedData, 0, 0);
-  };
+  }, [savedData]);
 
   /** 取得位置 */
   const getClientOffset = (event: any) => {
