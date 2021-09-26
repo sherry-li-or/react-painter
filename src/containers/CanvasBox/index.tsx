@@ -8,12 +8,14 @@ import { activeColorState, toolState } from "../../data/atom";
 import roundRect from "../../utils/roundRect";
 import pickColor from "../../utils/pickColor";
 import drawOval from "../../utils/drawOval";
+import last from "lodash/last";
+import { head, size } from "lodash";
 
 interface pointIF {
-  x?: number | undefined;
-  y?: number | undefined;
+  x?: number | null;
+  y?: number | null;
 }
-let lastPoint: { x?: number; y?: number } | null = {}; // 滑鼠移動的上一個點
+let lastPoint: pointIF | null = {}; // 滑鼠移動的上一個點
 let pointsArray: any = []; // 被記錄的點陣列
 
 const CanvasBox = () => {
@@ -29,7 +31,9 @@ const CanvasBox = () => {
   const [secondPoint, setSecondPoint] = useState<pointIF | null>({
     x: undefined,
     y: undefined,
-  }); // 滑鼠移動的上一個點
+  });
+  const [magnifier, setMagnifier] = useState(false); //是否放大中
+  const [initScale, setInitScale] = useState(1);
 
   const canvasRef = useRef<any>(null);
   const canvasWrapRef = useRef<any>(null);
@@ -152,12 +156,13 @@ const CanvasBox = () => {
     setIsDrawing(true);
     const point = getClientOffset(event);
     setInitialPoint({ ...point });
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
     switch (tool) {
       case "fillColor":
         fillCanvas();
         break;
       case "pickColor":
-        const ctx = canvasRef.current.getContext("2d");
         pickColor(ctx, point, setActiveColor);
         break;
       case "line":
@@ -175,6 +180,20 @@ const CanvasBox = () => {
       case "curve":
         saveCanvas();
         break;
+      case "polygon":
+        // drawPolygon({ ctx, point });
+        pointsArray = [...pointsArray, point];
+        drawPolygon({ ctx });
+        break;
+      case "magnifier":
+        if (magnifier) {
+          setInitScale((prev) => (prev -= 0.1));
+        } else {
+          setInitScale((prev) => (prev += 0.1));
+        }
+        setMagnifier(!magnifier);
+        saveCanvas();
+        break;
       default:
         break;
     }
@@ -184,6 +203,8 @@ const CanvasBox = () => {
    * 提起畫筆
    */
   const handleMouseUp = (event: any) => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
     if (isDrawing) {
       setIsDrawing(false);
       setInitialPoint(null);
@@ -192,6 +213,9 @@ const CanvasBox = () => {
         case "curve":
           const point = getClientOffset(event);
           setSecondPoint(point);
+          break;
+        case "magnifier":
+          dramImageByScale(initScale);
           break;
         default:
           break;
@@ -238,6 +262,57 @@ const CanvasBox = () => {
     const saved = new Image();
     saved.src = canvas.toDataURL("image/png");
     setSavedData(saved);
+  };
+
+  /** 多邊形 */
+  const drawPolygon = ({ ctx }: { ctx: CanvasRenderingContext2D }) => {
+    clearCanvas();
+    ctx.beginPath();
+    ctx.moveTo(pointsArray[0].x, pointsArray[0].y);
+    for (let index = 1; index < pointsArray.length; index++) {
+      ctx.lineTo(pointsArray[index].x, pointsArray[index].y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  };
+
+  // const drawPolygon = ({
+  //   ctx,
+  //   point,
+  // }: {
+  //   ctx: CanvasRenderingContext2D;
+  //   point: pointIF;
+  // }) => {
+  //   restore();
+  //   if (point.x && point.y && size(pointsArray)) {
+  //     ctx.beginPath();
+  //     ctx.strokeStyle = activeColor;
+  //     ctx.lineWidth = 1;
+  //     const lastX = last([...pointsArray]).x;
+  //     const lastY = last([...pointsArray]).y;
+  //     ctx.moveTo(lastX, lastY);
+  //     ctx.lineTo(point.x, point.y);
+  //     ctx.stroke();
+  //     ctx.closePath();
+  //     if (point === head([...pointsArray])) {
+  //       console.log("finid");
+  //     }
+  //   }
+  // };
+
+  const dramImageByScale = (scale: number) => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    let imgWidth = canvas.width;
+    let imgHeight = canvas.height;
+    canvas.width = imgWidth;
+    canvas.height = imgHeight;
+    const width = imgWidth * scale;
+    const height = imgHeight * scale;
+    const sx = canvas.width / 2 - width / 2; //x坐标
+    const sy = canvas.height / 2 - height / 2; //y坐标
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(savedData, sx, sy, width, height);
   };
 
   return (
