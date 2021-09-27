@@ -125,6 +125,8 @@ const CanvasBox = () => {
             point?.y || 0
           );
           break;
+        case "text":
+          break;
         default:
           break;
       }
@@ -194,17 +196,47 @@ const CanvasBox = () => {
         setMagnifier(!magnifier);
         saveCanvas();
         break;
+      case "text":
+        addText(event.clientX, event.clientY, point);
+        break;
       default:
         break;
     }
   };
 
+  const addText = (x: number, y: number, point: any) => {
+    const input = document.createElement("input");
+    input.type = "textarea";
+    input.style.position = "fixed";
+    input.style.left = x - 4 + "px";
+    input.style.top = y - 4 + "px";
+    input.style.zIndex = "100";
+    input.onkeydown = (event) => handleEnter(event, input, point);
+    document.body.appendChild(input);
+    input.focus();
+  };
+
+  const handleEnter = (event: any, input: any, point: pointIF) => {
+    const keyCode = event.keyCode;
+    if (keyCode === 13) {
+      drawText(input.value, point.x, point.y);
+      document.body.removeChild(input);
+    }
+  };
+
+  function drawText(txt: string, x: any, y: any) {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    ctx.textBaseline = "top";
+    ctx.textAlign = "left";
+    ctx.font = "14px sans-serif";
+    ctx.fillText(txt, x - 4, y - 4);
+  }
+
   /**
    * 提起畫筆
    */
   const handleMouseUp = (event: any) => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
     if (isDrawing) {
       setIsDrawing(false);
       setInitialPoint(null);
