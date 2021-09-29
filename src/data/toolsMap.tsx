@@ -8,7 +8,7 @@ import magnifier from "../images/cursors/magnifier.png";
 
 const toolsMap = [
   { name: "freeFormSelec", title: "選擇任意範圍", cursor: precise },
-  { name: "selec", title: "選擇", cursor: precise },
+  { name: "select", title: "選擇", cursor: precise },
   { name: "eraser", title: "橡皮擦/彩色橡皮擦", cursor: precise },
   { name: "fillColor", title: "填入色彩", cursor: fillBucket },
   { name: "pickColor", title: "挑選顏色", cursor: eyeDropper },

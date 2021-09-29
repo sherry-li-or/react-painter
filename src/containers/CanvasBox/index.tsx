@@ -10,6 +10,7 @@ import pickColor from "../../utils/pickColor";
 import drawOval from "../../utils/drawOval";
 import last from "lodash/last";
 import { head, size } from "lodash";
+import moveIcon from "../../images/cursors/move.png";
 
 interface pointIF {
   x?: number | null;
@@ -127,6 +128,14 @@ const CanvasBox = () => {
           break;
         case "text":
           break;
+        case "select":
+          // clearCanvas();
+          // restore();
+          // ctx.beginPath();
+          // ctx.setLineDash([5, 5]);
+          // ctx.strokeStyle = activeColor;
+          // ctx.strokeRect(initialPoint?.x, initialPoint?.y, width, height);
+          break;
         default:
           break;
       }
@@ -198,6 +207,10 @@ const CanvasBox = () => {
         break;
       case "text":
         addText(event.clientX, event.clientY, point);
+        break;
+      case "select":
+        saveCanvas();
+        createCanvas(point, ctx);
         break;
       default:
         break;
@@ -308,30 +321,6 @@ const CanvasBox = () => {
     ctx.stroke();
   };
 
-  // const drawPolygon = ({
-  //   ctx,
-  //   point,
-  // }: {
-  //   ctx: CanvasRenderingContext2D;
-  //   point: pointIF;
-  // }) => {
-  //   restore();
-  //   if (point.x && point.y && size(pointsArray)) {
-  //     ctx.beginPath();
-  //     ctx.strokeStyle = activeColor;
-  //     ctx.lineWidth = 1;
-  //     const lastX = last([...pointsArray]).x;
-  //     const lastY = last([...pointsArray]).y;
-  //     ctx.moveTo(lastX, lastY);
-  //     ctx.lineTo(point.x, point.y);
-  //     ctx.stroke();
-  //     ctx.closePath();
-  //     if (point === head([...pointsArray])) {
-  //       console.log("finid");
-  //     }
-  //   }
-  // };
-
   const dramImageByScale = (scale: number) => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
@@ -345,6 +334,51 @@ const CanvasBox = () => {
     const sy = canvas.height / 2 - height / 2; //y坐标
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(savedData, sx, sy, width, height);
+  };
+
+  /** 建立選擇的 canvas */
+  const createCanvas = (point: any, ctx: any) => {
+    const div = document.createElement("div");
+    div.style.position = "absolute";
+    div.style.left = point?.x + "px";
+    div.style.top = point?.y + "px";
+    div.style.width = 200 + "px";
+    div.style.height = 200 + "px";
+    div.style.zIndex = "10";
+    div.style.border = `2px dashed #999`;
+    const b = document.createElement("canvas");
+    b.width = 200;
+    b.height = 200;
+    div.appendChild(b);
+    div.style.cursor = `url(${moveIcon}) 8 8, move`;
+    canvasWrapRef.current.appendChild(div);
+    let imageData = ctx.getImageData(point.x, point.y, b.width, b.height);
+    const ctx_b = b.getContext("2d");
+    ctx_b && ctx_b.putImageData(imageData, 0, 0);
+    ctx.clearRect(point.x, point.y, b.width, b.height);
+
+    let dragFlag = false;
+    let x = 0,
+      y = 0;
+
+    div.onmousedown = (e) => {
+      e = e || window.event;
+      x = e.clientX - div.offsetLeft;
+      y = e.clientY - div.offsetTop;
+      dragFlag = true;
+    };
+
+    div.onmousemove = (e) => {
+      if (dragFlag) {
+        e = e || window.event;
+        div.style.left = e.clientX - x + "px";
+        div.style.top = e.clientY - y + "px";
+      }
+    };
+
+    div.onmouseup = function (e) {
+      dragFlag = false;
+    };
   };
 
   return (
